@@ -66,6 +66,11 @@ jobs:
         export LLVM=1
         export LLVM_IAS=1
 
+        # Fix DTC yaml
+          sed -i 's/yamltree\.o//' scripts/dtc/Makefile
+          sed -i '/dt_to_yaml/c\			/* yaml output disabled */' scripts/dtc/dtc.c
+          echo 'void dt_to_yaml(void *dti, void *f) {}' >> scripts/dtc/yamltree.c
+
         cd $KERNEL_DIR
         make O=out mrproper
         make O=out cepheus_defconfig
