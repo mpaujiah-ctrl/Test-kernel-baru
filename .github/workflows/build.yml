@@ -25,7 +25,7 @@ jobs:
         cd kernel
         # Menambahkan config langsung ke defconfig utama target sebelum di-compile
         # Catatan: ganti 'cepheus_defconfig' jika nama file defconfig di reponya berbeda
-        DEFCONFIG_PATH="arch/arm64/configs/cepheus_defconfig"
+        DEFCONFIG_PATH="kernel/arch/arm64/configs/cepheus_defconfig"
         
         echo "CONFIG_KALLSYMS=y" >> $DEFCONFIG_PATH
         echo "CONFIG_KALLSYMS_ALL=y" >> $DEFCONFIG_PATH
