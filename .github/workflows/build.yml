@@ -35,30 +35,49 @@ jobs:
 
     - name: Compile Kernel
       run: |
-        cd kernel
-        CLANG_BIN=$GITHUB_WORKSPACE/clang/bin
-        export PATH=$CLANG_BIN:$PATH
-        
+        export KERNEL_DIR=$PWD/kernel
+        export CLANG_PATH=$PWD/clang
+        export PATH=$CLANG_PATH/bin:$PATH
+
         export ARCH=arm64
         export SUBARCH=arm64
-        
-        # Panggil defconfig tanpa kata 'vendor/'
+        export LLVM=1
+        export LLVM_IAS=1
+
+        cd $KERNEL_DIR
+
         make O=out cepheus_defconfig
-        
-        # Proses Kompilasi dengan toolchain Proton Clang lengkap
+
         make -j$(nproc --all) O=out \
           CC=clang \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
-          LD=$CLANG_BIN/ld.lld \
-          AR=$CLANG_BIN/llvm-ar \
-          NM=$CLANG_BIN/llvm-nm \
-          OBJCOPY=$CLANG_BIN/llvm-objcopy \
-          OBJDUMP=$CLANG_BIN/llvm-objdump \
-          STRIP=$CLANG_BIN/llvm-strip
-          
-    - name: Upload Kernel Artifact
+          LD=ld.lld \
+          AR=llvm-ar \
+          NM=llvm-nm \
+          OBJCOPY=llvm-objcopy \
+          OBJDUMP=llvm-objdump \
+          STRIP=llvm-strip
+
+    - name: Build boot.img
+      run: |
+        mkdir -p anykernel/patch
+
+        # ambil kernel
+        cp kernel/out/arch/arm64/boot/Image.gz-dtb anykernel/zImage
+
+        # clone AnyKernel3
+        git clone https://github.com/osm0sis/AnyKernel3 anykernel
+
+        cd anykernel
+
+        # optional: set device name
+        sed -i 's/device.name=.*/device.name=cepheus/' anykernel.sh || true
+
+        zip -r9 boot.img.zip ./*
+
+        mv boot.img.zip ../boot.img
+
+    - name: Upload boot.img
       uses: actions/upload-artifact@v4
       with:
-        name: Image.gz-dtb-cepheus
-        path: kernel/out/arch/arm64/boot/Image.gz-dtb
+        name: boot-img-cepheus
+        path: boot.img
