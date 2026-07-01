@@ -21,8 +21,8 @@ jobs:
 
     - name: Clone Kernel Source
       run: |
-        git clone --depth=1 -b thirteen https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus kernel
-        
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang     
+    
     - name: Inject KALLSYMS Config
       run: |
         cd kernel
