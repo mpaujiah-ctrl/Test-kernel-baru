@@ -24,7 +24,10 @@ jobs:
     # =========================
     - name: Clone Clang Toolchain
       run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+        mkdir -p $HOME/clang
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r522817.tar.gz -O clang.tar.gz
+          tar -xf clang.tar.gz -C $HOME/clang
+          echo "$HOME/clang/bin" >> $GITHUB_PATH
 
     # =========================
     # 3. CLONE KERNEL
