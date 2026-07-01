@@ -14,10 +14,7 @@ jobs:
    
     - name: Download Clang Compiler
       run: |
-        mkdir clang
-        cd clang
-        curl -LO https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784d.tar.gz
-        tar -xf clang-r450784d.tar.gz
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git $HOME/proton
 
     - name: Clone Kernel Source
       run: |
