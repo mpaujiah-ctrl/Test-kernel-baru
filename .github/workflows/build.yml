@@ -50,12 +50,12 @@ jobs:
           CC=clang \
           CROSS_COMPILE=aarch64-linux-gnu- \
           CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
-          LD=ld.lld \
-          AR=llvm-ar \
-          NM=llvm-nm \
-          OBJCOPY=llvm-objcopy \
-          OBJDUMP=llvm-objdump \
-          STRIP=llvm-strip
+          LD=$CLANG_BIN/ld.lld \
+          AR=$CLANG_BIN/llvm-ar \
+          NM=$CLANG_BIN/llvm-nm \
+          OBJCOPY=$CLANG_BIN/llvm-objcopy \
+          OBJDUMP=$CLANG_BIN/llvm-objdump \
+          STRIP=$CLANG_BIN/llvm-strip
           
     - name: Upload Kernel Artifact
       uses: actions/upload-artifact@v4
