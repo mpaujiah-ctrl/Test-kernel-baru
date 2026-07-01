@@ -6,33 +6,55 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+
+    # =========================
+    # 1. ENV SETUP
+    # =========================
     - name: Setup Build Environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
-   
-    - name: Download Clang Compiler
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git $HOME/proton
+        sudo apt-get install -y \
+          bc bison build-essential ccache curl flex git \
+          libssl-dev libelf-dev libncurses5-dev zip
 
+    # =========================
+    # 2. CLONE CLANG (FIXED)
+    # =========================
+    - name: Clone Clang Toolchain
+      run: |
+        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+
+    # =========================
+    # 3. CLONE KERNEL
+    # =========================
     - name: Clone Kernel Source
       run: |
-        git clone --depth=1 -b pyro https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus kernel     
-    
-    - name: Inject KALLSYMS Config
+        git clone --depth=1 -b pyro \
+          https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus kernel
+
+    # =========================
+    # 4. CONFIG INJECTION (APATCH READY)
+    # =========================
+    - name: Inject Kernel Config (KALLSYMS)
       run: |
         cd kernel
-        # Menambahkan config langsung ke defconfig utama target sebelum di-compile
-        # Catatan: ganti 'cepheus_defconfig' jika nama file defconfig di reponya berbeda
-        DEFCONFIG_PATH="arch/arm64/configs/cepheus_defconfig"
-        
-        echo "CONFIG_KALLSYMS=y" >> $DEFCONFIG_PATH
-        echo "CONFIG_KALLSYMS_ALL=y" >> $DEFCONFIG_PATH
-        
-        echo "=== HASIL INJEKSI CONFIG ==="
-        tail -n 5 $DEFCONFIG_PATH
 
+        DEFCONFIG=arch/arm64/configs/cepheus_defconfig
+
+        echo "" >> $DEFCONFIG
+        echo "# Apatch / Debug support" >> $DEFCONFIG
+        echo "CONFIG_KALLSYMS=y" >> $DEFCONFIG
+        echo "CONFIG_KALLSYMS_ALL=y" >> $DEFCONFIG
+        echo "CONFIG_KALLSYMS_BASE_RELATIVE=y" >> $DEFCONFIG
+
+        echo "=== LAST CONFIG PATCH ==="
+        tail -n 10 $DEFCONFIG
+
+    # =========================
+    # 5. BUILD KERNEL (FIXED TOOLCHAIN)
+    # =========================
     - name: Compile Kernel
       run: |
         export KERNEL_DIR=$PWD/kernel
@@ -50,34 +72,14 @@ jobs:
 
         make -j$(nproc --all) O=out \
           CC=clang \
-          LD=ld.lld \
-          AR=llvm-ar \
-          NM=llvm-nm \
-          OBJCOPY=llvm-objcopy \
-          OBJDUMP=llvm-objdump \
-          STRIP=llvm-strip
+          LLVM=1 \
+          LLVM_IAS=1
 
-    - name: Build boot.img
-      run: |
-        mkdir -p anykernel/patch
-
-        # ambil kernel
-        cp kernel/out/arch/arm64/boot/Image.gz-dtb anykernel/zImage
-
-        # clone AnyKernel3
-        git clone https://github.com/osm0sis/AnyKernel3 anykernel
-
-        cd anykernel
-
-        # optional: set device name
-        sed -i 's/device.name=.*/device.name=cepheus/' anykernel.sh || true
-
-        zip -r9 boot.img.zip ./*
-
-        mv boot.img.zip ../boot.img
-
-    - name: Upload boot.img
+    # =========================
+    # 6. UPLOAD RESULT (KERNEL ONLY FIRST)
+    # =========================
+    - name: Upload Kernel Image
       uses: actions/upload-artifact@v4
       with:
-        name: boot-img-cepheus
-        path: boot.img
+        name: Image-gz-dtb-cepheus
+        path: kernel/out/arch/arm64/boot/Image.gz-dtb
