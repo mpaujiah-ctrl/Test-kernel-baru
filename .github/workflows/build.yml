@@ -36,19 +36,27 @@ jobs:
     - name: Compile Kernel
       run: |
         cd kernel
-        export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
+        CLANG_BIN=$GITHUB_WORKSPACE/clang/bin
+        export PATH=$CLANG_BIN:$PATH
+        
         export ARCH=arm64
         export SUBARCH=arm64
         
-        # 1. Generate config awal
+        # Panggil defconfig tanpa kata 'vendor/'
         make O=out cepheus_defconfig
         
-        # 2. Proses Kompilasi kernel
+        # Proses Kompilasi dengan toolchain Proton Clang lengkap
         make -j$(nproc --all) O=out \
           CC=clang \
           CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
-
+          CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
+          LD=ld.lld \
+          AR=llvm-ar \
+          NM=llvm-nm \
+          OBJCOPY=llvm-objcopy \
+          OBJDUMP=llvm-objdump \
+          STRIP=llvm-strip
+          
     - name: Upload Kernel Artifact
       uses: actions/upload-artifact@v4
       with:
