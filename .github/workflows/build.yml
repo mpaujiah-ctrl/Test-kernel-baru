@@ -67,7 +67,7 @@ jobs:
         export LLVM_IAS=1
 
         cd $KERNEL_DIR
-
+        make O=out mrproper
         make O=out cepheus_defconfig
 
         make -j$(nproc --all) O=out \
