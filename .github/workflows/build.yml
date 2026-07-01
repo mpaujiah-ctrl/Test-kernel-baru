@@ -17,8 +17,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           bc bison build-essential ccache curl flex git \
-          libssl-dev libelf-dev libncurses5-dev zip
-
+          libssl-dev libelf-dev libncurses5-dev zip \
+          libyaml-dev pkg-config
     # =========================
     # 2. CLONE CLANG (FIXED)
     # =========================
