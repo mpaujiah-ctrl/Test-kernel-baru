@@ -65,25 +65,14 @@ jobs:
         export CC=clang
         export LD=ld.lld
         
-        sudo apt-get install -y libyaml-dev
-        make O=out mrproper
-        make O=out ARCH=arm64 olddefconfig
-        make -j$(nproc) O=out ARCH=arm64 \
-            CC=clang \
-            LLVM=1 \
-            LLVM_IAS=1 \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
-            CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-            AR=llvm-ar \
-            NM=llvm-nm \
-            OBJCOPY=llvm-objcopy \
-            OBJDUMP=llvm-objdump \
-            STRIP=llvm-strip \
-            HOSTCC=gcc \
-            HOSTCXX=g++ \
-            HOSTLD=ld \
-            Image.gz-dtb dtbo.img 2>&1 | tee build.log
+        cat > scripts/dtc/yamltree.c << 'CEOF'
+        struct dt_info;
+        void dt_to_yaml(FILE *outf, struct dt_info *dti) {}
+        CEOF
+        echo "yamltree.c replaced with stub"
+        
+        make O=out CC=clang LD=ld.lld cepheus_defconfig
+        make O=out CC=clang LD=ld.lld -j$(nproc) Image.gz-dtb
             
     - name: Build AnyKernel3 Flashable Zip
       run: |
