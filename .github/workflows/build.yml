@@ -107,6 +107,22 @@ jobs:
           }
         done
 
+    - name: 🧯 SAFE DTC FIX (NO MAKEFILE EDIT)
+    run: |
+      cd "${KERNEL_DIR}"
+
+      echo "== SAFE FIX DTC (NO SOURCE MODIFICATION) =="
+
+      # reset kalau pernah ke-patch
+      git checkout -- scripts/dtc || true
+
+      # clean build artifacts
+      rm -rf scripts/dtc/*.o
+      rm -rf scripts/dtc/dtc
+
+      # disable YAML via FLAGS (SAFE WAY)
+      echo "DTC_FLAGS=-Odtb" >> $GITHUB_ENV
+    
     # =========================
     # 8. Build Kernel (CLEAN TOOLCHAIN)
     # =========================
