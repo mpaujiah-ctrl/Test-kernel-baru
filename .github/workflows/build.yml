@@ -14,12 +14,11 @@ jobs:
     # =========================
     - name: Setup Build Environment
       run: |
-        sudo apt-get update
-          sudo apt-get install -y build-essential flex bison libyaml-dev pkg-config \
-            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libelf-dev bc \
-            python2 python3 git zip curl wget
-          sudo ln -sf /usr/bin/python2 /usr/bin/python
-          
+        sudo apt update
+        sudo apt install -y bc bison flex libssl-dev libelf-dev build-essential git curl zip python3 gcc-aarch64-linux-gnu
+        sudo apt install -y gcc-arm-linux-gnueabi
+        sudo apt install -y libyaml-dev
+        
     # =========================
     # 2. CLONE CLANG (FIXED)
     # =========================
