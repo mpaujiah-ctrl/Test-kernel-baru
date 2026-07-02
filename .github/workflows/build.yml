@@ -1,105 +1,68 @@
-name: Build Kernel Mi 9 (cepheus)
+name: Build TURTLE-APatch (cepheus)
 
 on:
   workflow_dispatch:
+    inputs:
+      defconfig:
+        description: "Nama defconfig yang dipakai (contoh: cepheus_defconfig)"
+        required: true
+        default: "cepheus_defconfig"
+
+env:
+  KERNEL_DIR: ${{ github.workspace }}/kernel
+  OUT_DIR: ${{ github.workspace }}/out
+  ARCH: arm64
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-22.04
     steps:
+      - name: Checkout kernel source (branch bersih, tanpa KSUN/SUSFS)
+        uses: actions/checkout@v4
+        with:
+          path: kernel
+          fetch-depth: 1
+          # ganti sesuai nama branch clean kamu, misal: apatch-clean
+          ref: apatch-clean
 
-    # =========================
-    # 1. ENV SETUP
-    # =========================
-    - name: Setup Build Environment
-      run: |
-        sudo apt update
-        sudo apt install -y bc bison flex libssl-dev libelf-dev build-essential git curl zip python3 gcc-aarch64-linux-gnu
-        sudo apt install -y gcc-arm-linux-gnueabi
-        sudo apt install -y libyaml-dev
-        
-    # =========================
-    # 2. CLONE CLANG (FIXED)
-    # =========================
-    - name: Clone Clang Toolchain
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git $HOME/proton
-          
-    # =========================
-    # 3. CLONE KERNEL
-    # =========================
-    - name: Clone Kernel Source
-      run: |
-        git clone --depth=1 -b pyro \
-          https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus kernel
+      - name: Setup build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev libncurses-dev \
+            build-essential python3 python-is-python3 \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            device-tree-compiler cpio rsync
 
-    # =========================
-    # 4. CONFIG INJECTION (APATCH READY)
-    # =========================
-    - name: Inject Kernel Config (KALLSYMS)
-      run: |
-        echo "CONFIG_KALLSYMS=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_KALLSYMS_ALL=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_KALLSYMS_BASE_RELATIVE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_FTRACE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_FUNCTION_TRACER=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_DYNAMIC_FTRACE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_KPROBES=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_KPROBE_EVENTS=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        echo "CONFIG_DEBUG_INFO=y" >> kernel/arch/arm64/configs/cepheus_defconfig
-        
-    # =========================
-    # 5. BUILD KERNEL (FIXED TOOLCHAIN)
-    # =========================
-    - name: Compile Kernel
-      run: |
-        export KERNEL_DIR=$PWD/kernel
-        export CLANG_PATH=$PWD/clang
-        export PATH=$CLANG_PATH/bin:$PATH
-        export ARCH=arm64
-        export SUBARCH=arm64
-        export CC=clang
-        export LD=ld.lld
+      - name: Patch defconfig untuk APatch (CONFIG_KALLSYMS_ALL dkk)
+        run: |
+          python3 .github/scripts/patch_defconfig_apatch.py \
+            "${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
 
-        cd &KERNEL_DIR
-        make O=out cepheus_defconfig
-        make -j$(nproc --all) O=out \
-          CC=clang \
-          LLVM=1 \
-          LLVM_IAS=1
-            
-    - name: Build AnyKernel3 Flashable Zip
-      run: |
-        mkdir -p anykernel
+      - name: Verifikasi config kritikal sebelum build
+        run: |
+          CFG="${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
+          echo "== Cek config penting =="
+          for c in CONFIG_KALLSYMS CONFIG_KALLSYMS_ALL CONFIG_MODULES; do
+            grep -E "^${c}=" "$CFG" || { echo "GAGAL: $c tidak ter-set"; exit 1; }
+          done
 
-        # clone AnyKernel3
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3 anykernel
+      - name: Build kernel
+        run: |
+          cd "${KERNEL_DIR}"
+          export PATH="${KERNEL_DIR}/prebuilts/clang/host/linux-x86/clang-*/bin:${PATH}"
+          make O="${OUT_DIR}" ARCH=arm64 ${{ github.event.inputs.defconfig }}
+          make O="${OUT_DIR}" ARCH=arm64 -j$(nproc)
 
-        cd anykernel
+      - name: Package boot.img (AnyKernel3)
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3 "${{ github.workspace }}/AnyKernel3"
+          cp "${OUT_DIR}/arch/arm64/boot/Image.gz-dtb" "${{ github.workspace }}/AnyKernel3/" || \
+          cp "${OUT_DIR}/arch/arm64/boot/Image" "${{ github.workspace }}/AnyKernel3/"
+          cd "${{ github.workspace }}/AnyKernel3"
+          zip -r9 ../TURTLE-APatch-cepheus.zip . -x .git README.md
 
-        # =========================
-        # COPY KERNEL IMAGE
-        # =========================
-        cp ../kernel/out/arch/arm64/boot/Image.gz-dtb zImage
-
-        # =========================
-        # OPTIONAL DEVICE CONFIG
-        # =========================
-        sed -i 's/device.name=.*/device.name=cepheus/' anykernel.sh || true
-
-        # =========================
-        # CLEAN PACKAGING
-        # =========================
-        zip -r9 boot.img.zip . -x "*.git*" README.md
-
-        mv boot.img.zip ../boot-img-cepheus.zip
-
-    # =========================
-    # 6. UPLOAD RESULT (KERNEL ONLY FIRST)
-    # =========================
-    - name: Upload Kernel Image
-      uses: actions/upload-artifact@v4
-      with:
-        name: Image-gz-dtb-cepheus
-        path: kernel/out/arch/arm64/boot/Image.gz-dtb
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TURTLE-APatch-cepheus
+          path: TURTLE-APatch-cepheus.zip
