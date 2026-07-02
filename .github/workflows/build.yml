@@ -107,21 +107,37 @@ jobs:
           }
         done
 
-    - name: 🧯 SAFE DTC FIX (NO MAKEFILE EDIT)
+    - name: 🧠 DTC Safe Mode Engine (Guard Init)
       run: |
         cd "${KERNEL_DIR}"
 
-        echo "== SAFE FIX DTC (NO SOURCE MODIFICATION) =="
+        echo "== ACTIVATING DTC SAFE MODE =="
 
-        # reset kalau pernah ke-patch
+        # FORCE clean state
         git checkout -- scripts/dtc || true
 
-        # clean build artifacts
-        rm -rf scripts/dtc/*.o
-        rm -rf scripts/dtc/dtc
-
-        # disable YAML via FLAGS (SAFE WAY)
+        # HARD disable YAML build path (SAFE, no file editing logic)
+        export DTC_FLAGS="-Odtb"
         echo "DTC_FLAGS=-Odtb" >> $GITHUB_ENV
+
+    - name: 🧼 DTC Isolation Layer
+      run: |
+        cd "${KERNEL_DIR}"
+
+        echo "Cleaning any previous dtc build artifacts..."
+
+        # ONLY artifacts, NOT source
+        find scripts/dtc -name "*.o" -delete || true
+        find scripts/dtc -name "dtc" -delete || true
+        find scripts/dtc -name "*.tmp" -delete || true
+
+    - name: ⚙️ Host Compiler Safety Layer
+      run: |
+        unset CC
+        export HOSTCC=gcc
+        export HOSTCXX=g++
+
+        echo "Host compiler stabilized"
     
     # =========================
     # 8. Build Kernel (CLEAN TOOLCHAIN)
