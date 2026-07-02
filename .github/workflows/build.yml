@@ -148,6 +148,15 @@ jobs:
 
         echo "Host compiler stabilized"
     
+    - name: 🧯 HARD DISABLE YAML DTC (REAL FIX)
+      run: |
+        cd "${KERNEL_DIR}"
+
+        echo "Removing yamltree from build graph (SAFE way)"
+
+        # IMPORTANT: remove from object list, NOT file
+        sed -i 's/yamltree.o//g' scripts/dtc/Makefile
+    
     # =========================
     # 8. Build Kernel (CLEAN TOOLCHAIN)
     # =========================
