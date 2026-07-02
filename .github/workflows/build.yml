@@ -59,9 +59,9 @@ jobs:
           device-tree-compiler cpio rsync \
           libyaml-dev pkg-config curl zip
 
-    - name: 🔍 Debug Patch File
+    - name: 🔍 Show Makefile Context
       run: |
-        head -n 20 .github/patches/dtc_no_yaml.patch
+        grep -A5 -B5 yamltree "${KERNEL_DIR}/scripts/dtc/Makefile" || true
     
     # =========================
     # 5. Apply DTC No-YAML Patch
