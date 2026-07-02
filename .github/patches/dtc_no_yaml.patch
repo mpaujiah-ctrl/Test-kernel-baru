@@ -1,8 +1,8 @@
 --- a/scripts/dtc/Makefile
 +++ b/scripts/dtc/Makefile
 @@ -10,7 +10,6 @@
- 
- dtc-objs := dtc.o flattree.o fstree.o data.o livetree.o \
+
+dtc-objs := dtc.o flattree.o fstree.o data.o livetree.o \
 -	yamltree.o \
  	srcpos.o checks.o util.o
  
