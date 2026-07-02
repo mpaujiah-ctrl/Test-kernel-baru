@@ -58,6 +58,19 @@ jobs:
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git \
           $HOME/proton
 
+    - name: 🧯 HARD FIX DTC YAML (IMPORTANT)
+      run: |
+        cd "${KERNEL_DIR}"
+
+        echo "Disabling DTC YAML completely..."
+
+        # remove yaml dependency from build system
+        sed -i '/yamltree/d' scripts/dtc/Makefile || true
+        sed -i '/yaml_emitter/d' scripts/dtc/Makefile || true
+
+        # remove object if still forced
+        rm -f scripts/dtc/yamltree.o || true
+
     # =========================
     # 5. CRITICAL FIX: DTC YAML OFF (IMPORTANT)
     # =========================
