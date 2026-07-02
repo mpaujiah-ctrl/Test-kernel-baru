@@ -9,7 +9,7 @@ on:
         default: "cepheus_defconfig"
 
 env:
-  KERNEL_DIR: ${{ github.workspace }}
+  KERNEL_DIR: ${{ github.workspace }}/kernel
   OUT_DIR: ${{ github.workspace }}/out
   ARCH: arm64
 
@@ -17,11 +17,17 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout kernel source (branch bersih, tanpa KSUN/SUSFS)
+      - name: Checkout repo ini (script + workflow)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           ref: main
+
+      - name: Clone kernel source cepheus (branch bersih, tanpa KSUN/SUSFS)
+        run: |
+          git clone --depth=1 -b pyro \
+            https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus \
+            "${KERNEL_DIR}"
 
       - name: Setup build dependencies
         run: |
@@ -33,7 +39,7 @@ jobs:
 
       - name: Patch defconfig untuk APatch (CONFIG_KALLSYMS_ALL dkk)
         run: |
-          python3 "${KERNEL_DIR}/.github/scripts/patch_defconfig_apatch.py" \
+          python3 "${{ github.workspace }}/.github/scripts/patch_defconfig_apatch.py" \
             "${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
 
       - name: Verifikasi config kritikal sebelum build
