@@ -63,10 +63,13 @@ jobs:
           echo "== Sesudah patch =="
           grep -n yaml "$DTC_MK" || true
 
-      - name: Alias python2 ke python3 (mkdtboimg.py kompatibel python3)
+      - name: Ganti mkdtboimg.py dengan versi upstream yang python3-compatible
         run: |
           sudo ln -sf "$(command -v python3)" /usr/local/bin/python2
-          sed -i 's/xrange(/range(/g' "${KERNEL_DIR}/scripts/dtc/mkdtboimg.py"
+          curl -fsSL -o "${KERNEL_DIR}/scripts/dtc/mkdtboimg.py" \
+            https://raw.githubusercontent.com/viciouspup/libufdt-master-utils/master/src/mkdtboimg.py
+          python3 -c "import ast; ast.parse(open('${KERNEL_DIR}/scripts/dtc/mkdtboimg.py').read())" \
+            && echo "mkdtboimg.py valid dan siap dipakai"
 
       - name: Build kernel
         run: |
