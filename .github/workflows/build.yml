@@ -54,6 +54,15 @@ jobs:
             grep -E "^${c}=" "$CFG" || { echo "GAGAL: $c tidak ter-set"; exit 1; }
           done
 
+      - name: Perbaiki bug penamaan variable di scripts/dtc/Makefile (HOSTLDLIBS_dtc -> HOSTLOADLIBES_dtc)
+        run: |
+          DTC_MK="${KERNEL_DIR}/scripts/dtc/Makefile"
+          echo "== Sebelum patch =="
+          grep -n yaml "$DTC_MK" || true
+          sed -i 's/HOSTLDLIBS_dtc/HOSTLOADLIBES_dtc/' "$DTC_MK"
+          echo "== Sesudah patch =="
+          grep -n yaml "$DTC_MK" || true
+
       - name: Build kernel
         run: |
           cd "${KERNEL_DIR}"
