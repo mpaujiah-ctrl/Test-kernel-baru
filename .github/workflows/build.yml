@@ -54,16 +54,16 @@ jobs:
     # =========================
     - name: Compile Kernel
       run: |
-        export PATH="$HOME/proton/bin:$PATH"
+        export KERNEL_DIR=$PWD/kernel
+        export CLANG_PATH=$PWD/clang
+        export PATH=$CLANG_PATH/bin:$PATH
         export ARCH=arm64
         export SUBARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-gnu-
-        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         export CC=clang
         export LD=ld.lld
-        
-        make O=out cepheus_defconfig
 
+        cd &KERNEL_DIR
+        make O=out cepheus_defconfig
         make -j$(nproc --all) O=out \
           CC=clang \
           LLVM=1 \
