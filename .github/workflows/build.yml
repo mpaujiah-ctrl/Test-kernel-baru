@@ -22,8 +22,7 @@ jobs:
         with:
           path: kernel
           fetch-depth: 1
-          # ganti sesuai nama branch clean kamu, misal: apatch-clean
-          ref: apatch-clean
+          ref: main
 
       - name: Setup build dependencies
         run: |
