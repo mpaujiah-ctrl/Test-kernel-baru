@@ -50,7 +50,7 @@ jobs:
           -e DYNAMIC_FTRACE \
           -e KPROBES \
           -e KPROBE_EVENTS \
-          -e DEBUG_INFO
+          -e DEBUG_INFO \
 
     # =========================
     # 5. BUILD KERNEL (FIXED TOOLCHAIN)
