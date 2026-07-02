@@ -63,6 +63,9 @@ jobs:
           echo "== Sesudah patch =="
           grep -n yaml "$DTC_MK" || true
 
+      - name: Alias python2 ke python3 (mkdtboimg.py kompatibel python3)
+        run: sudo ln -sf "$(command -v python3)" /usr/local/bin/python2
+
       - name: Build kernel
         run: |
           cd "${KERNEL_DIR}"
