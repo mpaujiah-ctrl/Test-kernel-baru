@@ -60,6 +60,15 @@ jobs:
           libyaml-dev pkg-config curl zip
 
     # =========================
+    # 5. Apply DTC No-YAML Patch
+    # =========================
+    - name: 🩹 Apply DTC No-YAML Patch
+      run: |
+        cd "${KERNEL_DIR}"
+        git apply .github/patches/dtc_no_yaml.patch
+        export DTC_FLAGS=-Odtb
+    
+    # =========================
     # 4. Clang Toolchain
     # =========================
     - name: ⚙️ Clone Proton Clang
