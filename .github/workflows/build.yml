@@ -36,6 +36,15 @@ jobs:
           https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus \
           "${KERNEL_DIR}"
 
+    - name: ⚙️ Fix ARM64 LSE issue
+      run: |
+        cd "${KERNEL_DIR}"
+
+        echo "Disabling ARM64 LSE atoms for CI stability"
+
+        sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/CONFIG_ARM64_LSE_ATOMICS=n/' \
+         arch/arm64/configs/${{ github.event.inputs.defconfig }} || true
+    
     # =========================
     # 3. Dependencies (FIX DTC YAML ISSUE)
     # =========================
