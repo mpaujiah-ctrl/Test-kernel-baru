@@ -1,254 +1,85 @@
-name: 🚀 TURTLE Kernel CI (Production APatch)
+name: Build TURTLE-APatch (cepheus)
 
 on:
   workflow_dispatch:
     inputs:
       defconfig:
-        description: "Defconfig (ex: cepheus_defconfig)"
+        description: "Nama defconfig yang dipakai (contoh: cepheus_defconfig)"
         required: true
         default: "cepheus_defconfig"
 
 env:
   KERNEL_DIR: ${{ github.workspace }}/kernel
   OUT_DIR: ${{ github.workspace }}/out
-  ANYKERNEL_DIR: ${{ github.workspace }}/AnyKernel3
   ARCH: arm64
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-
     steps:
-    # =========================
-    # 1. Checkout workflow repo
-    # =========================
-    - name: 📥 Checkout CI Scripts
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
+      - name: Checkout repo ini (script + workflow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: main
 
-    # =========================
-    # 2. Clone Kernel Source
-    # =========================
-    - name: 🌿 Clone Kernel Source (Cepheus)
-      run: |
-        git clone --depth=1 -b pyro \
-          https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus \
-          "${KERNEL_DIR}"
+      - name: Clone kernel source cepheus (branch bersih, tanpa KSUN/SUSFS)
+        run: |
+          git clone --depth=1 -b pyro \
+            https://github.com/Spark-Devices/android_kernel_xiaomi_cepheus \
+            "${KERNEL_DIR}"
 
-    - name: ⚙️ Fix ARM64 LSE issue
-      run: |
-        cd "${KERNEL_DIR}"
+      - name: Setup build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev libncurses-dev \
+            build-essential python3 python-is-python3 \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            device-tree-compiler cpio rsync \
+            libyaml-dev pkg-config
 
-        echo "Disabling ARM64 LSE atoms for CI stability"
+      - name: Clone Proton Clang
+        run: git clone --depth=1 https://github.com/kdrag0n/proton-clang.git "${HOME}/proton"
 
-        sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/CONFIG_ARM64_LSE_ATOMICS=n/' \
-         arch/arm64/configs/${{ github.event.inputs.defconfig }} || true
-    
-    # =========================
-    # 3. Dependencies (FIX DTC YAML ISSUE)
-    # =========================
-    - name: 🧰 Install Build Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          bc bison flex git make \
-          libc6-dev libssl-dev libncurses-dev \
-          build-essential python3 python-is-python3 \
-          gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-          device-tree-compiler cpio rsync \
-          libyaml-dev pkg-config curl zip
+      - name: Patch defconfig untuk APatch (CONFIG_KALLSYMS_ALL dkk)
+        run: |
+          python3 "${{ github.workspace }}/.github/scripts/patch_defconfig_apatch.py" \
+            "${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
 
-    - name: 🔍 Show Makefile Context
-      run: |
-        grep -A5 -B5 yamltree "${KERNEL_DIR}/scripts/dtc/Makefile" || true
-    
-    # =========================
-    # 5. Apply DTC No-YAML Patch
-    # =========================
-    - name: 🩹 Apply DTC No-YAML Patch
-      run: |
-        cd "${KERNEL_DIR}"
-        git apply "${GITHUB_WORKSPACE}/.github/patches/dtc_no_yaml.patch"
-        export DTC_FLAGS=-Odtb
-    
-    # =========================
-    # 4. Clang Toolchain
-    # =========================
-    - name: ⚙️ Clone Proton Clang
-      run: |
-        git clone --depth=1 https://github.com/kdrag0n/proton-clang.git \
-          $HOME/proton
+      - name: Verifikasi config kritikal sebelum build
+        run: |
+          CFG="${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
+          echo "== Cek config penting =="
+          for c in CONFIG_KALLSYMS CONFIG_KALLSYMS_ALL CONFIG_MODULES; do
+            grep -E "^${c}=" "$CFG" || { echo "GAGAL: $c tidak ter-set"; exit 1; }
+          done
 
-    - name: 💣 HARD RESET DTC (ULTIMATE FIX)
-      run: |
-        cd "${KERNEL_DIR}"
+      - name: Build kernel
+        run: |
+          cd "${KERNEL_DIR}"
+          export PATH="${PATH}:${HOME}/proton/bin"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CC=clang
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export CROSS_COMPILE_COMPAT=arm-linux-gnueabi-
+          export HOSTCC=gcc
+          export HOSTCXX=g++
+          export HOSTLD=ld
+          make O="${OUT_DIR}" ARCH=arm64 ${{ github.event.inputs.defconfig }}
+          make O="${OUT_DIR}" ARCH=arm64 -j$(nproc)
 
-        echo "== CLEAN scripts/dtc completely =="
+      - name: Package boot.img (AnyKernel3)
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3 "${{ github.workspace }}/AnyKernel3"
+          cp "${OUT_DIR}/arch/arm64/boot/Image.gz-dtb" "${{ github.workspace }}/AnyKernel3/" || \
+          cp "${OUT_DIR}/arch/arm64/boot/Image" "${{ github.workspace }}/AnyKernel3/"
+          cd "${{ github.workspace }}/AnyKernel3"
+          zip -r9 ../TURTLE-APatch-cepheus.zip . -x .git README.md
 
-        # remove all generated dtc artifacts
-        rm -rf scripts/dtc/*.o
-        rm -rf scripts/dtc/dtc
-        rm -rf scripts/dtc/tmp*
-
-        # REMOVE YAML support completely
-        sed -i '/yaml/d' scripts/dtc/Makefile || true
-        sed -i '/YAML/d' scripts/dtc/Makefile || true
-        sed -i '/yamltree/d' scripts/dtc/Makefile || true
-
-        # FORCE dtc to dtb only mode
-        echo "DTC_FLAGS=-Odtb" >> $GITHUB_ENV
-
-    # =========================
-    # 5. CRITICAL FIX: DTC YAML OFF (IMPORTANT)
-    # =========================
-    - name: 🧯 Fix DTC (Disable YAML linker issues)
-      run: |
-        cd "${KERNEL_DIR}"
-        sed -i 's/-lyaml//g' scripts/dtc/Makefile || true
-        export DTC_FLAGS="-Odtb"
-
-    # =========================
-    # 6. Patch Defconfig (APatch)
-    # =========================
-    - name: 🩹 Patch Defconfig for APatch
-      run: |
-        python3 .github/scripts/patch_defconfig_apatch.py \
-          "${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
-
-    # =========================
-    # 7. Verify Config Safety
-    # =========================
-    - name: 🔍 Verify Kernel Config
-      run: |
-        CFG="${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
-        for c in CONFIG_KALLSYMS CONFIG_KALLSYMS_ALL CONFIG_MODULES; do
-          grep -q "$c" "$CFG" || {
-            echo "❌ Missing: $c"
-            exit 1
-          }
-        done
-
-    - name: 🧠 DTC Safe Mode Engine (Guard Init)
-      run: |
-        cd "${KERNEL_DIR}"
-
-        echo "== ACTIVATING DTC SAFE MODE =="
-
-        # FORCE clean state
-        git checkout -- scripts/dtc || true
-
-        # HARD disable YAML build path (SAFE, no file editing logic)
-        export DTC_FLAGS="-Odtb"
-        echo "DTC_FLAGS=-Odtb" >> $GITHUB_ENV
-
-    - name: 🧼 DTC Isolation Layer
-      run: |
-        cd "${KERNEL_DIR}"
-
-        echo "Cleaning any previous dtc build artifacts..."
-
-        # ONLY artifacts, NOT source
-        find scripts/dtc -name "*.o" -delete || true
-        find scripts/dtc -name "dtc" -delete || true
-        find scripts/dtc -name "*.tmp" -delete || true
-
-    - name: ⚙️ Host Compiler Safety Layer
-      run: |
-        unset CC
-        export HOSTCC=gcc
-        export HOSTCXX=g++
-
-        echo "Host compiler stabilized"
-    
-    - name: 🧯 HARD DISABLE YAML DTC (REAL FIX)
-      run: |
-        cd "${KERNEL_DIR}"
-
-        echo "Removing yamltree from build graph (SAFE way)"
-
-        # IMPORTANT: remove from object list, NOT file
-        sed -i 's/yamltree.o//g' scripts/dtc/Makefile
-  
-    
-    # =========================
-    # 8. Build Kernel (CLEAN TOOLCHAIN)
-    # =========================
-    - name: 🔨 Build Kernel
-      run: |
-        cd "${KERNEL_DIR}"
-
-        export PATH="$HOME/proton/bin:$PATH"
-        export ARCH=arm64
-        export SUBARCH=arm64
-
-        # IMPORTANT: avoid cross toolchain conflict
-        unset CROSS_COMPILE
-        unset CROSS_COMPILE_ARM32
-        unset CROSS_COMPILE_COMPAT
-
-        export CC=clang
-        export HOSTCC=gcc
-        export HOSTCXX=g++
-
-        mkdir -p "${OUT_DIR}"
-
-        echo "⚙️ Running defconfig..."
-        make O="${OUT_DIR}" ${{ github.event.inputs.defconfig }}
-
-        echo "🚀 Building kernel..."
-        make O="${OUT_DIR}" -j$(nproc) \
-          LLVM=1 LLVM_IAS=1
-
-    # =========================
-    # 9. Detect Kernel Image
-    # =========================
-    - name: 📦 Detect Kernel Image
-      run: |
-        cd "${OUT_DIR}/arch/arm64/boot"
-
-        if [ -f Image.gz-dtb ]; then
-          echo "KERNEL_IMAGE=Image.gz-dtb" >> $GITHUB_ENV
-        elif [ -f Image ]; then
-          echo "KERNEL_IMAGE=Image" >> $GITHUB_ENV
-        else
-          echo "❌ No kernel image found"
-          ls -R
-          exit 1
-        fi
-
-    # =========================
-    # 10. AnyKernel3 Packaging
-    # =========================
-    - name: 📦 Prepare AnyKernel3
-      run: |
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3 \
-          "${ANYKERNEL_DIR}"
-
-        cp "${OUT_DIR}/arch/arm64/boot/${KERNEL_IMAGE}" \
-          "${ANYKERNEL_DIR}/"
-
-        cd "${ANYKERNEL_DIR}"
-
-        zip -r9 "${GITHUB_WORKSPACE}/TURTLE-APatch-cepheus.zip" . \
-          -x ".git*" "README.md"
-
-    # =========================
-    # 11. Upload Artifact
-    # =========================
-    - name: 📤 Upload Kernel
-      uses: actions/upload-artifact@v4
-      with:
-        name: TURTLE-APatch-cepheus
-        path: TURTLE-APatch-cepheus.zip
-
-    # =========================
-    # 12. Build Summary
-    # =========================
-    - name: 📊 Build Summary
-      run: |
-        echo "✅ Build Completed"
-        echo "📦 Kernel: $KERNEL_IMAGE"
-        echo "⚡ Arch: arm64"
-        echo "🧠 Toolchain: Proton Clang"
-        echo "🔥 APatch Ready: YES"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TURTLE-APatch-cepheus
+          path: TURTLE-APatch-cepheus.zip
