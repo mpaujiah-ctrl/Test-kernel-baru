@@ -58,18 +58,24 @@ jobs:
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git \
           $HOME/proton
 
-    - name: 🧯 HARD FIX DTC YAML (IMPORTANT)
+    - name: 💣 HARD RESET DTC (ULTIMATE FIX)
       run: |
         cd "${KERNEL_DIR}"
 
-        echo "Disabling DTC YAML completely..."
+        echo "== CLEAN scripts/dtc completely =="
 
-        # remove yaml dependency from build system
+        # remove all generated dtc artifacts
+        rm -rf scripts/dtc/*.o
+        rm -rf scripts/dtc/dtc
+        rm -rf scripts/dtc/tmp*
+
+        # REMOVE YAML support completely
+        sed -i '/yaml/d' scripts/dtc/Makefile || true
+        sed -i '/YAML/d' scripts/dtc/Makefile || true
         sed -i '/yamltree/d' scripts/dtc/Makefile || true
-        sed -i '/yaml_emitter/d' scripts/dtc/Makefile || true
 
-        # remove object if still forced
-        rm -f scripts/dtc/yamltree.o || true
+        # FORCE dtc to dtb only mode
+        echo "DTC_FLAGS=-Odtb" >> $GITHUB_ENV
 
     # =========================
     # 5. CRITICAL FIX: DTC YAML OFF (IMPORTANT)
