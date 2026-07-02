@@ -39,19 +39,16 @@ jobs:
     # =========================
     - name: Inject Kernel Config (KALLSYMS)
       run: |
-        cd kernel
-
-        scripts/config --file arch/arm64/configs/cepheus_defconfig \
-          -e KALLSYMS \
-          -e KALLSYMS_ALL \
-          -e KALLSYMS_BASE_RELATIVE \
-          -e FTRACE \
-          -e FUNCTION_TRACER \
-          -e DYNAMIC_FTRACE \
-          -e KPROBES \
-          -e KPROBE_EVENTS \
-          -e DEBUG_INFO \
-
+        echo "CONFIG_KALLSYMS=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_KALLSYMS_ALL=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_KALLSYMS_BASE_RELATIVE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_FTRACE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_FUNCTION_TRACER=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_DYNAMIC_FTRACE=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_KPROBES=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_KPROBE_EVENTS=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        echo "CONFIG_DEBUG_INFO=y" >> kernel/arch/arm64/configs/cepheus_defconfig
+        
     # =========================
     # 5. BUILD KERNEL (FIXED TOOLCHAIN)
     # =========================
