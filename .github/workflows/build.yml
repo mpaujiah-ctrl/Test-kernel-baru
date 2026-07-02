@@ -165,12 +165,7 @@ jobs:
 
         # IMPORTANT: remove from object list, NOT file
         sed -i 's/yamltree.o//g' scripts/dtc/Makefile
-    
-    - name: 🩹 Apply DTC No-YAML Patch
-      run: |
-        cd "${KERNEL_DIR}"
-        git apply .github/patches/dtc_no_yaml.patch
-        export DTC_FLAGS=-Odtb
+  
     
     # =========================
     # 8. Build Kernel (CLEAN TOOLCHAIN)
