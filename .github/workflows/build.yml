@@ -65,8 +65,14 @@ jobs:
         export CC=clang
         export LD=ld.lld
         
-        make O=out CC=clang LD=ld.lld cepheus_defconfig
-        make O=out CC=clang LD=ld.lld -j$(nproc) Image.gz-dtb
+        cd $KERNEL_DIR
+
+        make O=out cepheus_defconfig
+
+        make -j$(nproc --all) O=out \
+          CC=clang \
+          LLVM=1 \
+          LLVM_IAS=1
             
     - name: Build AnyKernel3 Flashable Zip
       run: |
