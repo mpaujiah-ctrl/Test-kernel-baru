@@ -62,8 +62,6 @@ jobs:
         export CC=clang
         export LD=ld.lld
         
-        cd $KERNEL_DIR
-
         make O=out cepheus_defconfig
 
         make -j$(nproc --all) O=out \
