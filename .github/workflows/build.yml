@@ -65,7 +65,7 @@ jobs:
     - name: 🩹 Apply DTC No-YAML Patch
       run: |
         cd "${KERNEL_DIR}"
-        git apply "${GITHUB_WORKSPACE}/.github/patches/dtc_no_yaml.patch
+        git apply "${GITHUB_WORKSPACE}/.github/patches/dtc_no_yaml.patch"
         export DTC_FLAGS=-Odtb
     
     # =========================
