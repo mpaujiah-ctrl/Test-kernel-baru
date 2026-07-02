@@ -64,7 +64,9 @@ jobs:
           grep -n yaml "$DTC_MK" || true
 
       - name: Alias python2 ke python3 (mkdtboimg.py kompatibel python3)
-        run: sudo ln -sf "$(command -v python3)" /usr/local/bin/python2
+        run: |
+          sudo ln -sf "$(command -v python3)" /usr/local/bin/python2
+          sed -i 's/xrange(/range(/g' "${KERNEL_DIR}/scripts/dtc/mkdtboimg.py"
 
       - name: Build kernel
         run: |
