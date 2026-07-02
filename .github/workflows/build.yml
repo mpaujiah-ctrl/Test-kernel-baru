@@ -9,7 +9,7 @@ on:
         default: "cepheus_defconfig"
 
 env:
-  KERNEL_DIR: ${{ github.workspace }}/kernel
+  KERNEL_DIR: ${{ github.workspace }}
   OUT_DIR: ${{ github.workspace }}/out
   ARCH: arm64
 
@@ -20,7 +20,6 @@ jobs:
       - name: Checkout kernel source (branch bersih, tanpa KSUN/SUSFS)
         uses: actions/checkout@v4
         with:
-          path: kernel
           fetch-depth: 1
           ref: main
 
@@ -34,7 +33,7 @@ jobs:
 
       - name: Patch defconfig untuk APatch (CONFIG_KALLSYMS_ALL dkk)
         run: |
-          python3 .github/scripts/patch_defconfig_apatch.py \
+          python3 "${KERNEL_DIR}/.github/scripts/patch_defconfig_apatch.py" \
             "${KERNEL_DIR}/arch/arm64/configs/${{ github.event.inputs.defconfig }}"
 
       - name: Verifikasi config kritikal sebelum build
