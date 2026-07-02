@@ -65,12 +65,6 @@ jobs:
         export CC=clang
         export LD=ld.lld
         
-        cat > scripts/dtc/yamltree.c << 'CEOF'
-        struct dt_info;
-        void dt_to_yaml(FILE *outf, struct dt_info *dti) {}
-        CEOF
-        echo "yamltree.c replaced with stub"
-        
         make O=out CC=clang LD=ld.lld cepheus_defconfig
         make O=out CC=clang LD=ld.lld -j$(nproc) Image.gz-dtb
             
