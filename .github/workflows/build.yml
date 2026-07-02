@@ -56,16 +56,8 @@ jobs:
 
       - name: Nonaktifkan YAML support di dtc (tidak dibutuhkan untuk build kernel)
         run: |
-          DTC_MK="${KERNEL_DIR}/scripts/dtc/Makefile"
-          if [ -f "$DTC_MK" ]; then
-            sed -i '/yamltree\.o/d' "$DTC_MK"
-            sed -i '/lyaml/d' "$DTC_MK"
-            sed -i '/yaml-0\.1/d' "$DTC_MK"
-            echo "== Sisa baris terkait yaml di Makefile (harusnya kosong) =="
-            grep -in yaml "$DTC_MK" || echo "Bersih, tidak ada referensi yaml lagi."
-          else
-            echo "PERINGATAN: $DTC_MK tidak ditemukan, skip patch."
-          fi
+          python3 "${{ github.workspace }}/.github/scripts/strip_yaml_from_dtc.py" \
+            "${KERNEL_DIR}/scripts/dtc/Makefile"
 
       - name: Build kernel
         run: |
