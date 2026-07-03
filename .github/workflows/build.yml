@@ -99,4 +99,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TURTLE-APatch-cepheus
-          path: TURTLE-APatch-cepheus.zip
+          path: |
+            TURTLE-APatch-cepheus.zip
+            out/arch/arm64/boot/Image
